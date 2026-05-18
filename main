@@ -1,0 +1,357 @@
+#include <iostream>
+#include <vector>
+#include <map>
+#include <queue>
+#include <stack>
+#include <set>
+#include <algorithm>
+#include <limits>
+#include <iomanip>
+#include <climits>
+
+using namespace std;
+
+/**
+ * Graph class implementing an undirected, edge-weighted graph using Adjacency List.
+ * Task 1: Graph Representation
+ */
+class Graph {
+private:
+    map<char, vector<pair<char, int>>> adjacencyList;  // adjacency list: vertex -> {(neighbor, weight)}
+    set<char> vertices;
+
+public:
+    /**
+     * Add a vertex to the graph
+     */
+    void addVertex(char v) {
+        vertices.insert(v);
+        if (adjacencyList.find(v) == adjacencyList.end()) {
+            adjacencyList[v] = vector<pair<char, int>>();
+        }
+    }
+
+    /**
+     * Add an undirected edge between u and v with given weight.
+     * For undirected graphs, we add edges in both directions.
+     */
+    void addEdge(char u, char v, int weight) {
+        addVertex(u);
+        addVertex(v);
+        adjacencyList[u].push_back({v, weight});
+        adjacencyList[v].push_back({u, weight});
+    }
+
+    /**
+     * Print the adjacency list representation of the graph
+     */
+    void printAdjacencyList() const {
+        cout << "\n" << string(60, '=') << "\n";
+        cout << "ADJACENCY LIST REPRESENTATION\n";
+        cout << string(60, '=') << "\n";
+        
+        for (char vertex : vertices) {
+            cout << vertex << ": [";
+            const auto& neighbors = adjacencyList.at(vertex);
+            for (size_t i = 0; i < neighbors.size(); i++) {
+                cout << neighbors[i].first << "(" << neighbors[i].second << ")";
+                if (i < neighbors.size() - 1) cout << ", ";
+            }
+            cout << "]\n";
+        }
+        cout << string(60, '=') << "\n\n";
+    }
+
+    /**
+     * TASK 2: Depth-First Search using recursion
+     * Returns the traversal order.
+     */
+    vector<char> dfsRecursive(char start) {
+        set<char> visited;
+        vector<char> traversal;
+        dfsHelper(start, visited, traversal);
+        return traversal;
+    }
+
+private:
+    void dfsHelper(char v, set<char>& visited, vector<char>& traversal) {
+        visited.insert(v);
+        traversal.push_back(v);
+        
+        // Sort neighbors to ensure consistent ordering
+        vector<char> neighbors;
+        for (const auto& edge : adjacencyList[v]) {
+            neighbors.push_back(edge.first);
+        }
+        sort(neighbors.begin(), neighbors.end());
+        
+        for (char neighbor : neighbors) {
+            if (visited.find(neighbor) == visited.end()) {
+                dfsHelper(neighbor, visited, traversal);
+            }
+        }
+    }
+
+public:
+    /**
+     * TASK 2: Depth-First Search using an explicit stack (iterative)
+     * Returns the traversal order.
+     */
+    vector<char> dfsIterative(char start) {
+        set<char> visited;
+        stack<char> st;
+        vector<char> traversal;
+        
+        st.push(start);
+        
+        while (!st.empty()) {
+            char v = st.top();
+            st.pop();
+            
+            if (visited.find(v) == visited.end()) {
+                visited.insert(v);
+                traversal.push_back(v);
+                
+                // Get neighbors and sort them in reverse (for correct stack order)
+                vector<char> neighbors;
+                for (const auto& edge : adjacencyList[v]) {
+                    neighbors.push_back(edge.first);
+                }
+                sort(neighbors.rbegin(), neighbors.rend());
+                
+                for (char neighbor : neighbors) {
+                    if (visited.find(neighbor) == visited.end()) {
+                        st.push(neighbor);
+                    }
+                }
+            }
+        }
+        
+        return traversal;
+    }
+
+    /**
+     * TASK 2: Breadth-First Search using a queue
+     * Returns the traversal order.
+     */
+    vector<char> bfs(char start) {
+        set<char> visited;
+        queue<char> q;
+        vector<char> traversal;
+        
+        q.push(start);
+        visited.insert(start);
+        
+        while (!q.empty()) {
+            char v = q.front();
+            q.pop();
+            traversal.push_back(v);
+            
+            // Get neighbors and sort them
+            vector<char> neighbors;
+            for (const auto& edge : adjacencyList[v]) {
+                neighbors.push_back(edge.first);
+            }
+            sort(neighbors.begin(), neighbors.end());
+            
+            for (char neighbor : neighbors) {
+                if (visited.find(neighbor) == visited.end()) {
+                    visited.insert(neighbor);
+                    q.push(neighbor);
+                }
+            }
+        }
+        
+        return traversal;
+    }
+
+    /**
+     * TASK 3: Dijkstra's Algorithm to find shortest paths
+     * Uses a priority queue (min-heap) for optimization.
+     * 
+     * Returns:
+     *   - distances: map of vertex to shortest distance from start
+     *   - paths: map of vertex to the path from start to that vertex
+     */
+    pair<map<char, int>, map<char, vector<char>>> dijkstra(char start) {
+        map<char, int> distances;
+        map<char, vector<char>> paths;
+        
+        // Initialize distances and paths
+        for (char vertex : vertices) {
+            distances[vertex] = INT_MAX;
+            paths[vertex] = vector<char>();
+        }
+        distances[start] = 0;
+        paths[start] = {start};
+        
+        // Priority queue: (distance, vertex)
+        priority_queue<pair<int, char>, vector<pair<int, char>>, greater<pair<int, char>>> pq;
+        set<char> visited;
+        
+        pq.push({0, start});
+        
+        while (!pq.empty()) {
+            auto [currentDistance, currentVertex] = pq.top();
+            pq.pop();
+            
+            // Skip if already visited
+            if (visited.find(currentVertex) != visited.end()) {
+                continue;
+            }
+            
+            visited.insert(currentVertex);
+            
+            // Explore neighbors
+            for (const auto& edge : adjacencyList[currentVertex]) {
+                char neighbor = edge.first;
+                int weight = edge.second;
+                
+                if (visited.find(neighbor) == visited.end()) {
+                    int newDistance = currentDistance + weight;
+                    
+                    // Update if we found a shorter path
+                    if (newDistance < distances[neighbor]) {
+                        distances[neighbor] = newDistance;
+                        paths[neighbor] = paths[currentVertex];
+                        paths[neighbor].push_back(neighbor);
+                        pq.push({newDistance, neighbor});
+                    }
+                }
+            }
+        }
+        
+        return {distances, paths};
+    }
+};
+
+/**
+ * Helper function to print a vector of characters
+ */
+void printVector(const vector<char>& vec, const string& prefix = "") {
+    if (!prefix.empty()) cout << prefix;
+    for (size_t i = 0; i < vec.size(); i++) {
+        cout << vec[i];
+        if (i < vec.size() - 1) cout << " -> ";
+    }
+    cout << "\n";
+}
+
+int main() {
+    // Create the graph
+    Graph g;
+    
+    // Input data: Add vertices and edges
+    vector<char> vertices = {'A', 'B', 'C', 'D', 'E', 'F'};
+    for (char v : vertices) {
+        g.addVertex(v);
+    }
+    
+    vector<tuple<char, char, int>> edges = {
+        {'B', 'A', 11},
+        {'C', 'B', 11},
+        {'D', 'C', 15},
+        {'E', 'A', 12},
+        {'F', 'D', 15},
+        {'A', 'C', 2}
+    };
+    
+    for (const auto& [u, v, weight] : edges) {
+        g.addEdge(u, v, weight);
+    }
+    
+    cout << "\n" << string(60, '#') << "\n";
+    cout << "GRAPH ASSIGNMENT 4 - COMPLETE SOLUTION (C++)\n";
+    cout << string(60, '#') << "\n";
+    
+    // ===== TASK 1: Print Adjacency List =====
+    cout << "\n\n### TASK 1: GRAPH REPRESENTATION (ADJACENCY LIST) ###\n\n";
+    cout << "Input Data:\n";
+    cout << "Vertices: ";
+    for (char v : vertices) cout << v << " ";
+    cout << "\n\nEdges (u, v, weight):\n";
+    for (const auto& [u, v, w] : edges) {
+        cout << "  add_edge('" << u << "', '" << v << "', " << w << ")\n";
+    }
+    
+    g.printAdjacencyList();
+    
+    // ===== TASK 2: DFS and BFS =====
+    cout << "\n### TASK 2: GRAPH SEARCH & TRAVERSAL ###\n\n";
+    
+    char startNode = 'A';
+    cout << "Starting Node: " << startNode << "\n\n";
+    
+    // DFS
+    vector<char> dfsResult = g.dfsRecursive(startNode);
+    cout << "DFS Traversal Order (from " << startNode << "): ";
+    printVector(dfsResult);
+    
+    // BFS
+    vector<char> bfsResult = g.bfs(startNode);
+    cout << "BFS Traversal Order (from " << startNode << "): ";
+    printVector(bfsResult);
+    
+    cout << "\n" << string(60, '-') << "\n";
+    cout << "REPORT QUESTION: Which algorithm is better suited for\n";
+    cout << "finding the shortest path in an UNWEIGHTED graph, and why?\n";
+    cout << string(60, '-') << "\n\n";
+    cout << "ANSWER:\n";
+    cout << "BFS (Breadth-First Search) is better suited for finding the\n";
+    cout << "shortest path in an unweighted graph for the following reasons:\n\n";
+    cout << "1. CORRECTNESS: BFS explores nodes level by level, ensuring\n";
+    cout << "   that the first time a node is visited, it has been reached\n";
+    cout << "   via the shortest path (in terms of number of edges).\n\n";
+    cout << "2. EFFICIENCY: BFS is guaranteed to find the shortest path with\n";
+    cout << "   O(V + E) time complexity, where V is vertices and E is edges.\n";
+    cout << "   It doesn't need to track distances or use priority queues.\n\n";
+    cout << "3. NO WEIGHT CONSIDERATION: Since all edges have equal cost (1)\n";
+    cout << "   in unweighted graphs, DFS might explore deeper before finding\n";
+    cout << "   a shorter path. BFS naturally finds the minimal-hop path first.\n\n";
+    cout << "4. SIMPLER IMPLEMENTATION: BFS for unweighted shortest path is\n";
+    cout << "   simpler than Dijkstra's algorithm, with no need for a heap.\n\n";
+    cout << "In contrast, DFS might go deep in one direction and find a path\n";
+    cout << "with more edges, missing the shorter BFS path. Dijkstra's is\n";
+    cout << "overkill for unweighted graphs (BFS is a special case of Dijkstra).\n";
+    
+    // ===== TASK 3: Dijkstra's Algorithm =====
+    cout << "\n\n### TASK 3: SHORTEST PATH (DIJKSTRA'S ALGORITHM) ###\n\n";
+    
+    char sourceNode = 'B';
+    cout << "Source Node: " << sourceNode << "\n\n";
+    
+    auto [distances, paths] = g.dijkstra(sourceNode);
+    
+    cout << "Shortest Paths and Distances from " << sourceNode << " to all vertices:\n";
+    cout << string(60, '-') << "\n";
+    cout << left << setw(5) << "To" << setw(12) << "Distance" << "Path\n";
+    cout << string(60, '-') << "\n";
+    
+    for (char vertex : vertices) {
+        cout << left << setw(5) << vertex 
+             << setw(12) << distances[vertex];
+        
+        // Print path
+        if (paths[vertex].empty()) {
+            cout << "(unreachable)";
+        } else {
+            for (size_t i = 0; i < paths[vertex].size(); i++) {
+                cout << paths[vertex][i];
+                if (i < paths[vertex].size() - 1) cout << " -> ";
+            }
+        }
+        cout << "\n";
+    }
+    cout << string(60, '-') << "\n";
+    
+    // Summary
+    cout << "\n\nSUMMARY OF RESULTS:\n";
+    cout << string(60, '=') << "\n";
+    cout << "✓ Task 1: Graph created with " << vertices.size() << " vertices and " << edges.size() << " edges\n";
+    cout << "✓ Task 2: DFS and BFS traversals completed from node '" << startNode << "'\n";
+    cout << "✓ Task 3: Dijkstra's algorithm completed from node '" << sourceNode << "'\n";
+    cout << "✓ Report question: BFS is optimal for unweighted graphs\n";
+    cout << string(60, '=') << "\n\n";
+    
+    return 0;
+}
