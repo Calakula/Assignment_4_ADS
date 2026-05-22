@@ -1,5 +1,5 @@
 # Assignment_4_ADS
-idk what i need to write here, so i'll just tell a history.
+idk what i need to write here, so i'll just tell a story.
 
 I met this girl once. She was gorgeous, came from money, and actually knew programming too.
 So one day I asked her out.
